@@ -667,9 +667,9 @@ class User extends EventEmitter {
 				});
 			break;
 			case 'safe.deposit':
-				pack.coins=Number(pack.coins);
-				if (isNaN(pack.coins)) return self.senderr('参数有误');
 				if (!pack.coins) return;
+				if (!Number.isInteger(pack.coins)) return self.senderr('参数有误');
+				pack.coins=Number.parseInt(pack.coins);
 				if (self.table && self.table.gamedata.playerBanker && self.table.gamedata.playerBanker==self) return self.senderr('坐庄时不能存钱');
 				if ((self.coins-(self.lockedCoins||0))<pack.coins) return self.senderr('现金不足');
 				g_db.p.depositlog.insert({_t:new Date(), act:'存入保险箱', coins:self.coins, lockedCoins:self.lockedCoins, savedMoney:self.savedMoney, change:-pack.coins, id:self.id});
@@ -677,7 +677,7 @@ class User extends EventEmitter {
 				self.coins-=pack.coins;
 			break;
 			case 'safe.withdraw':
-				if (isNaN(pack.coins)) return self.senderr('参数有误');
+				if (!Number.isInteger(pack.coins)) return self.senderr('参数有误');
 				pack.coins=Number(pack.coins);
 				if (self.savedMoney<pack.coins) return self.senderr('保险箱中没有那么多资金');
 				g_db.p.depositlog.insert({_t:new Date(), act:'提取现金', coins:self.coins, lockedCoins:self.lockedCoins, savedMoney:self.savedMoney, change:pack.coins, id:self.id});
@@ -720,8 +720,8 @@ class User extends EventEmitter {
 				//chk pwd
 				if (!pack.pwd) return this.senderr('参数有误');
 				if (pack.pwd!=this.dbuser.secpwd) return this.senderr('密码不正确');
-				if (isNaN(pack.coins)) return self.senderr('参数有误');
-				pack.coins=Number(pack.coins);
+				if (!Number.isInteger(pack.coins)) return self.senderr('参数有误');
+				pack.coins=Number.parseInt(pack.coins);
 				if (pack.coins<=0) return self.senderr('金豆数量不对');
 				if (pack.coins>this.savedMoney) return this.senderr('没有足够的金豆');
 				if (pack.target==this.showId) return this.senderr('不能转给自己');

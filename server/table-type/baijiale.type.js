@@ -32,6 +32,97 @@ function shortenCoinStr(n) {
 	return n;
 }
 
+/**
+ * 保护data内的原始数据不被修改
+ * @param {object} data 
+ */
+function makeProtecting(data) {
+    var protectOnce=(function() {
+        var _map=new WeakMap();
+        var chk=function(o) {
+            var ret=_map.get(o);
+            if (ret) return ret;
+            ret=Protecting(o);
+            // _map({obj, proxiedObj}, {proxiedObj, proxiedObj})
+            // _map.set(o, ret);
+            return ret;
+        }
+        chk.set=function(o, p) {
+            _map.set(o, p);
+        }
+        return chk;
+    })();
+    function Protecting(data) {
+        if ((data instanceof Map) ||
+            (data instanceof Set) ||
+            (data instanceof WeakMap) ||
+            (data instanceof WeakSet) ||
+            (data instanceof Date)) return data;
+        var _modified={}, allkeys=new Set(Object.getOwnPropertyNames(data));
+        var innerData=new Proxy(data, {
+            get(target, property, receiver) {
+                // var ef=extendf.get(innerData);
+                // if (ef && ef[property]) return ef[property];
+                if (property=='keysize') return allkeys.size;
+                if (property=='clear') return function() {
+                    _modified={}; allkeys=new Set(Object.getOwnPropertyNames(data));
+                }
+                if (_modified.hasOwnProperty(property)) return _modified[property];
+                var ret =Reflect.get(...arguments);
+                return ret;
+            },
+            set(target, property, value, receiver) {
+                allkeys.add(property);
+                if (value && typeof value=='object') {
+                    _modified[property]=protectOnce(value);
+                } else {
+                    _modified[property]=value;
+                }
+
+                return true;
+            },
+            has(target, prop) {
+                return allkeys.has(prop);
+            },
+            ownKeys(target) {
+                if (allkeys.size==0) return [];
+                var keys=[], _it=allkeys.values();
+                while(true) {
+                    var item=_it.next();
+                    if (item.done) break;
+                    keys.push(item.value);
+                }
+                return keys;
+            },
+            getOwnPropertyDescriptor(t, k) {
+                return Object.getOwnPropertyDescriptor(t, k) || {
+                    enumerable: true,
+                    configurable: true,
+                };
+            },
+            deleteProperty(target, prop) {
+                if (!allkeys.has(prop)) return false;
+                allkeys.delete(prop);
+                _modified[prop]=undefined;
+                return true;
+            },
+            defineProperty(target, property, descriptor) {
+                throw 'Protecting 不支持defineProperty';
+            },
+        });
+
+        protectOnce.set(innerData, innerData);
+        protectOnce.set(data, innerData);
+        for (var k in data) {
+            var o=data[k];
+            if (o && typeof o=='object') {
+                innerData[k]=protectOnce(o);
+            }
+        }
+        return innerData;
+	}
+	return Protecting(data);
+}
 const GAME_STATUS={
 	KAIJU:1,
 	FAPAI:2,
@@ -56,13 +147,13 @@ class Baijiale extends TableBase {
 		this.profits=[];
 		this.profits.sum=0;
 		this.roomtype='baccarat';
+		var game=this.gamedata.game=new Game();
 		this.gamedata.opt=merge({minZhu:10, maxZhu:7500, minDui:1, maxDui:750, maxHe:950}, opt);
 		this.opt=this.gamedata.opt;
 		this.gamedata.roomid=roomid;
 		this.gamedata.his=[];
 		this.gamedata.seats={};
 		this.gamedata.enroll=[];
-		var game=this.gamedata.game=new Game();
 		var self=this;
 		game.on('burn', function(detail) {
 			self.broadcast({c:'table.baccarat.burn', detail, seq:1});
@@ -149,11 +240,9 @@ class Baijiale extends TableBase {
 		// 简化user对象，只传输id nickname face level score
 		//console.log(JSON.stringify(obj));
 		var self = this;
-		if (obj.enroll) {
-			var a=0;
-		}
 		if (!obj.deal && !obj.seats && !obj.playerBanker && !obj.enroll) return {scene:obj};
-		obj=clone(obj);
+		// obj=clone(obj);
+		obj=makeProtecting(obj);
 		if (obj.deal) {
 			if (!obj.seats) obj.seats={};
 			for (var i in obj.deal) {
@@ -177,7 +266,7 @@ class Baijiale extends TableBase {
 			}
 		}
 		if (obj.playerBanker) {
-			debugout('upd playerBanker'.cyan, this.scene.playerBanker.bankerSets);
+			// debugout('upd playerBanker'.cyan, this.scene.playerBanker.bankerSets);
 			var u=this.scene.playerBanker;
 			if (!u) delete obj.playerBanker;
 			else obj.playerBanker={id:u.id, nickname:u.nickname, coins:u.coins, bankerSets:u.bankerSets, profit:u.profit};
@@ -238,7 +327,7 @@ class Baijiale extends TableBase {
 
 		var playerBanker=this.gamedata.playerBanker;
 		if (playerBanker) {
-			debugout('chg bankerSets'.cyan, playerBanker.bankerSets);
+			// debugout('chg bankerSets'.cyan, playerBanker.bankerSets);
 			playerBanker.bankerSets++;
 			var delta=this.mk_transfer_gamedata({playerBanker:playerBanker});
 			this.broadcast(delta);
@@ -324,7 +413,7 @@ class Baijiale extends TableBase {
 			return (gd.opt.maxZhu-(Math.abs((total.xian+pack.xian)*factor.xian-(total.zhuang+pack.zhuang)*factor.zhuang)+(total.xianDui+pack.xianDui)*factor.xianDui+(total.zhuangDui+pack.zhuangDui)*factor.zhuangDui));
 		}
 		function handleXiazhu(pack, user) {
-			if (!gd.playerBanker) return user.senderr('无人坐庄，禁止下注');
+			// if (!gd.playerBanker) return user.senderr('无人坐庄，禁止下注');
 			if (user==gd.playerBanker) return;
 			var deal=gd.deal[user.id];
 			if (!deal) {

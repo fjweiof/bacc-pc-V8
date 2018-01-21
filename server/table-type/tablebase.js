@@ -14,11 +14,10 @@ class TableBase {
     constructor(roomid, type, opt) {
 		this.__ob=true;
 		this.code=roomid;
-        this.gamedata=this.scene={};
 		this.msgDispatcher=new EventEmitter();;
         
         var self=this;
-        syncfy(this.gamedata, function(v) {
+        this.gamedata=this.scene=syncfy({}, function(v) {
             var seats=self.gamedata.seats;
             if (!seats) {
                 assert.fail('gamedata|scene对象中必须包含seats，这是座位！！');
