@@ -8,6 +8,7 @@ module.exports=function(cb) {
 
         easym.createDbJson(db, {col:db.servers, key:{_id:'statement'}, default:{total_profit:0, canenter:true, canchat:false}, alwayscreate:true}, function(err, srv) {
             if (!err) srv_stat=srv;
+            srv_stat.total_profit=Math.floor(srv_stat.total_profit);
             cb(err, srv);
         });
     });

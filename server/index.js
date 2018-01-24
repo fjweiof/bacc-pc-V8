@@ -83,6 +83,8 @@ function afterUserInStep2(err, pack, ws, dbuser) {
 	if (!args.debugout && (!pack.version || pack.version!='1.1.0')) return ws.sendp({err:'软件已升级，点击屏幕重新加载以便完成更新', act:'reload'});
 	if (dbuser) {
 		if (dbuser.block>new Date()) return ws.sendp({c:'lgerr',msg:'账号被封停', view:'login'});
+		dbuser.coins=Math.floor(dbuser.coins);
+		dbuser.savedMoney=Math.floor(dbuser.savedMoney);
 		if (!dbuser.__created) {
 			// if (dbuser.pwd && md5(''+(dbuser.salt||'')+pack.pwd)!=dbuser.pwd) return ws.sendp({c:'lgerr', msg:'账号密码错', view:'login'});
 			if (dbuser.pwd && pack.pwd!=dbuser.pwd) return ws.sendp({c:'lgerr', msg:'账号密码错', view:'login'});
@@ -221,6 +223,8 @@ module.exports=function msgHandler(db, createDbJson, wss) {
 					} 
 					else 
 						createDbJson(db, {col:db.users, key:pack.id, alwayscreate:true, default:default_user}, function(err, dbuser) {
+							if (err) return ws.sendp({err:err});
+							if (!dbuser) return ws.sendp({err:'can`t get|create user'})
 							debugout('new one');
 							if (dbuser.__created) db.users.find({nickname:(pack.nickname||pack.id)}).limit(1).toArray(function(err, arr) {
 								if (err) return ws.sendp({c:'regerr', msg:err.message, view:'login'});

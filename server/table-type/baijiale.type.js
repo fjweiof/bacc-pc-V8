@@ -173,6 +173,7 @@ class Baijiale extends TableBase {
 	}
 	countOnline() {
 		this.gamedata.online=Object.keys(this.gamedata.seats).length;
+		debugout(('online:'+this.gamedata.online).yellow);
 	}
 	get onlineCount() {
 		return this.gamedata.online;
@@ -192,7 +193,7 @@ class Baijiale extends TableBase {
 		this.quit(user);
 	}
 	enter(user) {
-		if (this.quitTimer) clearTimeout(this.quitTimer);
+		// if (this.quitTimer) clearTimeout(this.quitTimer);
 		var seat=null, gd=this.gamedata;
 
 		if (!gd.seats[user.id]) {
@@ -413,7 +414,7 @@ class Baijiale extends TableBase {
 			return (gd.opt.maxZhu-(Math.abs((total.xian+pack.xian)*factor.xian-(total.zhuang+pack.zhuang)*factor.zhuang)+(total.xianDui+pack.xianDui)*factor.xianDui+(total.zhuangDui+pack.zhuangDui)*factor.zhuangDui));
 		}
 		function handleXiazhu(pack, user) {
-			// if (!gd.playerBanker) return user.senderr('无人坐庄，禁止下注');
+			if (!gd.playerBanker) return user.senderr('无人坐庄，禁止下注');
 			if (user==gd.playerBanker) return;
 			var deal=gd.deal[user.id];
 			if (!deal) {
@@ -627,7 +628,7 @@ class Baijiale extends TableBase {
 					}
 					var adjustR=total_charge/gd.playerBanker.coins;
 					for (var i=0; i<l; i++) {
-						if (user_win_list[i].win) user_win_list[i].win=adjustR*user_win_list[i].win;
+						if (user_win_list[i].win) user_win_list[i].win=Math.floor(adjustR*user_win_list[i].win);
 					}
 				}
 				modifyUserCoins(gd.playerBanker, profit);
@@ -764,6 +765,9 @@ class Baijiale extends TableBase {
 }
 
 function modifyUserCoins(user, delta) {
+	if (Math.floor(delta)!=delta) {
+		var a=0;
+	}
 	user.dbuser.coins+=delta;
 	user.send({user:{coins:user.dbuser.coins}});
 }

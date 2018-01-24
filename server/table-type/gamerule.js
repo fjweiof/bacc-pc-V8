@@ -1,3 +1,5 @@
+const inspect=require('util').inspect;
+
 var shuffle = require('gy-shuffle'),
     baccaratHand = require('./baccarat-hand'),
     EventEmitter = require('events').EventEmitter,
@@ -7,7 +9,7 @@ var playerThirdCard;
 
 var debugout=require('debugout')(require('yargs').argv.debugout);
 
-var shoe, player, banker;
+var shoe;
 
 function Game() {
   EventEmitter.call(this);
@@ -15,8 +17,8 @@ function Game() {
   var game = this;
   this.onPlayerInputNeeded;
   this.onEnd;
-  var player=this.player=new baccaratHand();
-  var banker=this.banker=new baccaratHand();
+  this.player=new baccaratHand();
+  this.banker=new baccaratHand();
 
   var handsPlayed = 0;
 
@@ -64,22 +66,22 @@ function Game() {
   this.playHand =function() {
     // console.log("-----------------");
     handsPlayed++;
-    banker.init();
-    player.init();
-    shoe.deal(2, [player, banker]);
-    this.emit('draw', {player:player, banker:banker});
+    this.banker.init();
+    this.player.init();
+    shoe.deal(2, [this.player, this.banker]);
+    this.emit('draw', {player:this.player, banker:this.banker});
     displayGameStatus.call(this);
     checkNaturals.call(this);
     // console.log("-----------------");
   }
 
   function checkNaturals() {
-    var playerScore = player.s=player.score();
-    var bankerScore = banker.s=banker.score();
+    var playerScore = this.player.s=this.player.score();
+    var bankerScore = this.banker.s=this.banker.score();
 
     var r={playerPair:false, bankerPair:false};
-    if (player.cards[0].sort==player.cards[1].sort) r.playerPair=true; 
-    if (banker.cards[0].sort==banker.cards[1].sort) r.bankerPair=true;
+    if (this.player.cards[0].sort==this.player.cards[1].sort) r.playerPair=true; 
+    if (this.banker.cards[0].sort==this.banker.cards[1].sort) r.bankerPair=true;
 
     if (playerScore === 8 && bankerScore < 8) {
       // console.log('P');
@@ -112,15 +114,15 @@ function Game() {
   }
 
   function thirdCardDraw() {
-    var playerScore = player.score();
-    var bankerScore = banker.score();
+    var playerScore = this.player.score();
+    var bankerScore = this.banker.score();
 
     // When player score is < 6
     if (playerScore < 6 && playerScore >= 0) {
       // console.log("Drawing third card for player");
       playerThirdCard = shoe.draw();
-      player.push(playerThirdCard);
-      this.emit('draw', {player:player});
+      this.player.push(playerThirdCard);
+      this.emit('draw', {player:this.player});
 
       // Check banker drawing rules if third card between 0 and 9...
       pThirdCard = playerThirdCard.sort;
@@ -128,29 +130,29 @@ function Game() {
         if (bankerScore === 3 && pThirdCard != 8 ) {
           // console.log("Banker 3 and player third Card is not 8");
           var bankerThirdCard = shoe.draw();
-          banker.push(bankerThirdCard);
-          this.emit('draw', {banker:banker});
+          this.banker.push(bankerThirdCard);
+          this.emit('draw', {banker:this.banker});
           return checkWinner.call(this);
         } else if (bankerScore === 4 && (
             pThirdCard >= 2 && pThirdCard <= 7 )) {
           // console.log("Banker 4 and player third card between 2 and 7");
           var bankerThirdCard = shoe.draw();
-          banker.push(bankerThirdCard);
-          this.emit('draw', {banker:banker});
+          this.banker.push(bankerThirdCard);
+          this.emit('draw', {banker:this.banker});
           return checkWinner.call(this);
         } else if (bankerScore === 5 && (
             pThirdCard >= 4 && pThirdCard <= 7 )) {
           // console.log("Banker 5 and player third card between 4 and 7");
           var bankerThirdCard = shoe.draw();
-          banker.push(bankerThirdCard);
-          this.emit('draw', {banker:banker});
+          this.banker.push(bankerThirdCard);
+          this.emit('draw', {banker:this.banker});
           return checkWinner.call(this);
         } else if (bankerScore === 6 && (
             pThirdCard >= 6 && pThirdCard <= 7 )) {
           // console.log("Banker 6 and player 3rd card between 6 and 7");
           var bankerThirdCard = shoe.draw();
-          banker.push(bankerThirdCard);
-          this.emit('draw', {banker:banker});
+          this.banker.push(bankerThirdCard);
+          this.emit('draw', {banker:this.banker});
           return checkWinner.call(this);
         }
       }
@@ -159,8 +161,8 @@ function Game() {
     if(bankerScore >= 0 && bankerScore <= 5) {
       // console.log("bankerscore between 0 and 5");
       var bankerThirdCard = shoe.draw();
-      banker.push(bankerThirdCard);
-      this.emit('draw', {banker:banker});
+      this.banker.push(bankerThirdCard);
+      this.emit('draw', {banker:this.banker});
       return checkWinner.call(this);
     } else {
       // None of the condition satisfied
@@ -170,11 +172,11 @@ function Game() {
   }
 
   function checkWinner() {
-    var playerScore = player.s=player.score();
-    var bankerScore = banker.s=banker.score();
+    var playerScore = this.player.s=this.player.score();
+    var bankerScore = this.banker.s=this.banker.score();
     var r={playerPair:false, bankerPair:false};
-    if (player.cards[0].sort==player.cards[1].sort) r.playerPair=true; 
-    if (banker.cards[0].sort==banker.cards[1].sort) r.bankerPair=true;
+    if (this.player.cards[0].sort==this.player.cards[1].sort) r.playerPair=true; 
+    if (this.banker.cards[0].sort==this.banker.cards[1].sort) r.bankerPair=true;
     if (playerScore > bankerScore) {
       displayGameStatus.call(this);
       // console.log('P');
@@ -195,8 +197,8 @@ function Game() {
   }
 
   function displayGameStatus() {
-    debugout('Player: %s (%d)', player.toString(), player.score());
-    debugout('Banker: %s (%d)', banker.toString(), banker.score());
+    debugout('Player: %s (%d)', this.player.toString(), this.player.score());
+    debugout('Banker: %s (%d)', this.banker.toString(), this.banker.score());
     debugout("Deck Size : " + shoe.length);
     this.leftCards=shoe.length;
   }
@@ -212,16 +214,39 @@ if (module==require.main) {
 
     input.setEncoding('utf8');
 
+    function showSuit(cards) {
+      var str=cards[0].suit+' '+cards[0].description;
+      if (cards.length==1) return str;
+      for (var i=1; i<cards.length; i++) {
+        str+=', '+cards[i].suit+' '+cards[i].description;
+      }
+      return str;
+    }
+    function showR(o) {
+      var str='';
+      if (o.player) {
+        str+='player:'+showSuit(o.player.cards);
+      }
+      if (o.banker) {
+        str+=' | banker:'+showSuit(o.banker.cards);
+      }
+      return str;
+    }
     game.on('input', function(callback){
         input.once('data', function(command){
-            callback(command.substring(0, command.length -1));
+            // callback(command.substring(0, command.length -1));
+            game.begin();game.playHand();
         });
     })
-    .on('burn', console.log)
-    .on('draw', console.log)
-    .on('result', console.log)
+    // .on('burn', console.log)
+    // .on('draw', function(o) {console.log(showR(o))})
+    // .on('result', function(o) {console.log(showR(o))})
     .on('end', function(){
         input.destroy();
     });
     game.begin();
+    for (var i=0; i<10; i++) {
+      console.log('============', i, '================');
+      game.playHand();
+    }
 }
