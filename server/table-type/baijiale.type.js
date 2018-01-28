@@ -241,11 +241,11 @@ class Baijiale extends TableBase {
 		// 简化user对象，只传输id nickname face level score
 		//console.log(JSON.stringify(obj));
 		var self = this;
-		if (!obj.deal && !obj.seats && !obj.playerBanker && !obj.enroll) return {scene:obj};
+		if (!obj.deal && !obj.seats && !obj.playerBanker && !obj.enroll && !obj.his) return {scene:obj};
 		// obj=clone(obj);
 		obj=makeProtecting(obj);
 		if (obj.deal) {
-			if (!obj.seats) obj.seats={};
+			// if (!obj.seats) obj.seats={};
 			for (var i in obj.deal) {
 				// var u=this.scene.seats[i].user;
 				// obj.seats[i]={};
@@ -276,6 +276,15 @@ class Baijiale extends TableBase {
 			for (var i in obj.enroll) {
 				var u=obj.enroll[i];
 				obj.enroll[i]={id:u.id, nickname:u.nickname, coins:u.coins};
+			}
+		}
+		if (obj.his) {
+			for (var i=0, l=obj.his.length; i<l; i++) {
+				var item=obj.his[i].deal;
+				if (!item) continue;
+				item.zhuang=item.zhuang[idx];
+				item.xian=item.xian[idx];
+				item.he=item.he[idx];
 			}
 		}
 		return {scene:obj};
@@ -321,7 +330,7 @@ class Baijiale extends TableBase {
 	chooseBanker(cb) {
 		// 庄要求下庄或者庄已经不在线了
 		if (this.playerBankerWantQuit || (this.gamedata.playerBanker && this.gamedata.seats[this.gamedata.playerBanker.id]==null)) {
-			this.gamedata.playerBanker=null;
+			this.gamedata.playerBanker='';
 			this.playerBankerWantQuit=null;
 		}
 		var limitSets=playerBankerSetLimits;
@@ -337,7 +346,7 @@ class Baijiale extends TableBase {
 			}
 		}
 		if (this.gamedata.enroll.length==0) {
-			this.gamedata.playerBanker=null;
+			this.gamedata.playerBanker='';
 			return cb();
 		}
 		var self=this, anticipate=null;
@@ -346,7 +355,7 @@ class Baijiale extends TableBase {
 			if (!anticipate.offline && anticipate.coins>=enrollBaseCoins && anticipate.coins<=enrollMaxCoins) break;
 		}
 		if (i>=this.gamedata.enroll.length) {
-			this.gamedata.playerBanker=null;
+			this.gamedata.playerBanker='';
 			this.gamedata.enroll=[];
 			return cb();
 		}
@@ -537,6 +546,14 @@ class Baijiale extends TableBase {
 		this.gamedata.status=GAME_STATUS.JIESUAN;
 		var self=this, gd=this.gamedata;
 		var r=gd.his[gd.his.length-1];
+		// 把下注信息也存起来
+		r.deal={zhuang:{}, xian:{}, he:{}};
+		for (var id in gd.deal) {
+			var d=gd.deal[id];
+			if (d.zhuang) r.deal.zhuang[id]=d.zhuang;
+			if (d.xian) r.deal.xian[id]=d.xian;
+			if (d.he) r.deal.he[id]=d.he;
+		}
 		var winArr=[], loseArr, tieArr=[];
 		if (r.win=='tie') {
 			winArr.push('he');
@@ -567,6 +584,7 @@ class Baijiale extends TableBase {
 			var deal=gd.deal[k];
 			deal.user.lockedCoins=0;
 			updObj.seats[k]={user:deal.user};
+			// updObj.seats[k]=deal.user;
 			// var orgCoins=deal.user.coins;
 			var userwin=0, userlose=0;
 			for (var i=0;i<winArr.length; i++) {
@@ -608,6 +626,7 @@ class Baijiale extends TableBase {
 		// profit里是庄家的盈利，庄盈利
 		if (this.isPlayerBanker()) {
 			updObj.seats[gd.playerBanker.id]={user:gd.playerBanker};
+			// updObj.seats[gd.playerBanker.id]=gd.playerBanker;
 			if (profit>0) {
 				var p=Math.round(profit*waterRatio);
 				water+=(profit-p);
@@ -678,7 +697,7 @@ class Baijiale extends TableBase {
 				var o=self.mk_transfer_gamedata(updObj, i);
 				o.seq=1;
 				o.jiesuan=true;
-				// seat.user.send(o);
+				self.broadcast(o, seat.user);
 			}
 		}	
 		(function(next) {
@@ -711,7 +730,7 @@ class Baijiale extends TableBase {
 		});
 	}
 	isPlayerBanker() {
-		return (this.gamedata.playerBanker!=null);
+		return (!!this.gamedata.playerBanker);
 	}
 	msg(pack, comesfrom) {
 		var self=this;
