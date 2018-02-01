@@ -641,11 +641,12 @@ class Baijiale extends TableBase {
 					// 调整用户盈利
 					var orgProfit=profit;
 					profit=-gd.playerBanker.coins;
-					var total_charge=0, l=user_win_list.length;
+					var total_win=0, total_lose=0, total_charge=0, l=user_win_list.length;
 					for (var i=0; i<l; i++) {
-						total_charge+=user_win_list[i].win-user_win_list[i].lose;
+						total_win+=user_win_list[i].win;
+						total_lose+=user_win_list[i].lose;
 					}
-					var adjustR=total_charge/gd.playerBanker.coins;
+					var adjustR=(gd.playerBanker.coins+total_lose)/total_win;
 					for (var i=0; i<l; i++) {
 						if (user_win_list[i].win) user_win_list[i].win=Math.floor(adjustR*user_win_list[i].win);
 					}
